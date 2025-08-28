@@ -2,11 +2,12 @@
 
 import type React from "react";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Send, Bot, User } from "lucide-react";
+import ReactMarkdown from "react-markdown";
 
 interface Message {
   id: string;
@@ -27,9 +28,21 @@ export function DemoSection() {
   ]);
   const [inputValue, setInputValue] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const chatContainerRef = useRef<HTMLDivElement>(null);
+
+  const scrollToBottom = () => {
+    if (chatContainerRef.current) {
+      chatContainerRef.current.scrollTop =
+        chatContainerRef.current.scrollHeight;
+    }
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
 
   const handleSendMessage = async () => {
-    if (!inputValue.trim()) return;
+    if (!inputValue.trim() || isLoading) return;
 
     const userMessage: Message = {
       id: Date.now().toString(),
@@ -42,8 +55,6 @@ export function DemoSection() {
     setInputValue("");
     setIsLoading(true);
 
-    // TODO: Replace with actual API call to FastAPI endpoint
-    // This is placeholder code for the chat functionality
     try {
       const sessionID = "demo-session"; // You might replace this with dynamic session handling
 
@@ -92,7 +103,7 @@ export function DemoSection() {
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" && !e.shiftKey) {
+    if (e.key === "Enter" && !e.shiftKey && !isLoading) {
       e.preventDefault();
       handleSendMessage();
     }
@@ -120,7 +131,10 @@ export function DemoSection() {
             </CardHeader>
             <CardContent className="p-0">
               {/* Chat Messages */}
-              <div className="h-96 overflow-y-auto p-4 space-y-4">
+              <div
+                ref={chatContainerRef}
+                className="h-96 overflow-y-auto p-4 space-y-4"
+              >
                 {messages.map((message) => (
                   <div
                     key={message.id}
@@ -148,7 +162,35 @@ export function DemoSection() {
                           : "bg-muted text-muted-foreground"
                       }`}
                     >
-                      <p className="text-sm">{message.content}</p>
+                      {message.sender === "assistant" ? (
+                        <ReactMarkdown
+                          components={{
+                            p: ({ children }) => (
+                              <p className="text-sm my-1">{children}</p>
+                            ),
+                            ul: ({ children }) => (
+                              <ul className="text-sm list-disc pl-4 my-1">
+                                {children}
+                              </ul>
+                            ),
+                            li: ({ children }) => (
+                              <li className="text-sm">{children}</li>
+                            ),
+                            strong: ({ children }) => (
+                              <strong className="font-semibold">
+                                {children}
+                              </strong>
+                            ),
+                            em: ({ children }) => (
+                              <em className="italic">{children}</em>
+                            ),
+                          }}
+                        >
+                          {message.content}
+                        </ReactMarkdown>
+                      ) : (
+                        <p className="text-sm">{message.content}</p>
+                      )}
                     </div>
                   </div>
                 ))}
@@ -181,8 +223,9 @@ export function DemoSection() {
                     value={inputValue}
                     onChange={(e) => setInputValue(e.target.value)}
                     onKeyPress={handleKeyPress}
-                    placeholder="Type your message..."
-                    disabled={isLoading}
+                    placeholder={
+                      isLoading ? "AI is responding..." : "Type your message..."
+                    }
                     className="flex-1"
                   />
                   <Button
