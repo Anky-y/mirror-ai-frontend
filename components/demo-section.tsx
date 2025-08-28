@@ -76,6 +76,9 @@ export function DemoSection() {
       setIsLoading(false);
     } catch (error) {
       console.error("Error sending message:", error);
+      if (typeof error === "object" && error !== null && "content" in error) {
+        console.error("ERROR CONTENT:", error.content);
+      }
       setIsLoading(false);
 
       const errorMessage: Message = {
